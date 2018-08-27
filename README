@@ -1,0 +1,23 @@
+OpenBSD compatibility scripts for Debian
+========================================
+
+This installs symlinks and wrappers for usual OpenBSD commands into a
+Debian system to prevent muscle memory errors.
+
+The following files and directories will be installed:
+
+ * /usr/local/sbin/rcctl (wrapper around /usr/sbin/service)
+ * /usr/local/bin/doas (symlink to /usr/bin/sudo)
+ * /etc/rc.d (symlink to /etc/init.d)
+
+Installation
+============
+
+make install
+
+CAVEATS
+=======
+
+Make sure that the directories are correctly specified in the Makefile.
+Otherwise the /install/ and /uninstall/ targets may destroy 
+configuration and system files.
