@@ -1,20 +1,25 @@
 #!/bin/sh
-# Copyright (c) 2018 David Dahlberg <dyn+code@dahlberg.cologne>
-#
-# Permission to use, copy, modify, and distribute this software for any
-# purpose with or without fee is hereby granted, provided that the above
-# copyright notice and this permission notice appear in all copies.
-#
-# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+unset force 
+
+usage () {
+	printf "usage:\n"
+	printf " %s [-f] action daemon\n" "$(basename $0)"
+	printf " %s enable|disable daemon\n" "$(basename $0)"
+	printf " %s ls lsarg\n" "$(basename $0)"
+}
+
+while getopts 'f' opt; do
+	case $opt in
+	f|-f)	force=true;
+		shift;;
+	*)	printf "usage: %s [-nsr]\n" "$(basename $0)"
+		exit 2;;
+	esac
+done
 
 if [ $# -lt 2 ]; then
-	echo "usage: $0 ACTION DAEMONS">&2
+	echo "usage: $0 action daemons">&2
 	exit 1
 fi
 
@@ -22,29 +27,53 @@ action=$1
 shift
 daemons=$@
 
+for daemon in $daemons; do
+	case $daemon in
+	ntpd)	 daemon=openntp;;
+	smtpd)   daemon=opensmtpd;;
+	sshd)	 daemon=ssh;;
+	xntp)	 daemon=ntp;;
+	*)	;;
+	esac
+	ndaemons="$ndaemons $daemon"
+done
+daemons=$(echo "$ndaemons" | sed 's/^ //')
+
 case "$action" in
-	start|stop|restart|reload)
+	check|disable|enable|stop|reload)
 		for daemon in $daemons; do
-			service $daemon $action
+			systemctl $action $daemon
 		done
 		;;
-	check)
+	start|restart)
 		for daemon in $daemons; do
-			service $daemon status
+			if systemctl -q is-enabled $daemon || [ "$force" ]; then
+				systemctl $action $daemon
+			else
+				printf "%s: need -f to force start since %s\n" \
+				    "$daemon" \
+				    "$(systemctl show $daemon --property UnitFileState)"
+			fi
 		done
 		;;
 	ls)
 		lsarg=$daemons
 		case "$lsarg" in
-			all)	service --status-all;;
-			off)	service --status-all| grep '^ \[ - \]';;
-			on)	service --status-all| grep '^ \[ + \]';;
+			all)	systemctl list-units --all;;
+			failed)	systemctl list-units --state=failed;;
+			off)	systemctl list-units --state=inactive;;
+			on)	systemctl list-units --state=active;;
+			started)	systemctl list-units;; 
+			stopped)	systemctl list-units --state=exited;;
 			*)
 				echo "Unknown lsarg '$lsarg'">&2
 				echo "Valid lsargs:">&2
 				echo "  all">&2
-				echo "  on">&2
+				echo "  failed">&2
 				echo "  off">&2
+				echo "  on">&2
+				echo "  started">&2
+				echo "  stopped">&2
 				;;
 		esac
 		;;

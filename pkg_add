@@ -1,0 +1,52 @@
+#!/bin/sh
+
+	
+usage() {
+	echo "usage: $(basename $0) [-aiu] [pkg-name]">&2
+}
+
+
+unset mark
+action=install
+
+args=`getopt aiu $*` 
+if [ $? -ne 0 ]; then 
+	usage
+	exit 1
+fi 
+set -- $args 
+while [ $# -ne 0 ]; do 
+	case "$1" in
+	-a) 
+		mark=true
+		shift
+		;;
+	-i)
+		# noop
+		shift
+		;;
+	-u)
+		action=upgrade
+		shift
+		;;
+	--) 
+		shift;
+		args=$*
+		break;; 
+	esac 
+done
+
+packages="$@"
+
+# plausibility checks
+case "$action" in
+install)
+	if [ -z "$packages" ]; then	
+		echo "no package chosen" >&2
+		exit 1
+	fi
+	;;
+esac
+
+apt -q update && apt $action $packages
+[ "$mark" ] && apt-mark auto $packages

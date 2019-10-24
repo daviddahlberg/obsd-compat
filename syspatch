@@ -1,0 +1,17 @@
+#!/bin/sh
+
+upgrade_flags="-qy"
+
+while getopts 'c' opt; do
+	case $opt in
+	c|-c)	update_pipe=">/dev/null"
+		upgrade_flags="-qqs";;
+	*)	printf "usage: %s [-c]\n" "$(basename $0)"
+		exit 2;;
+	esac
+done
+
+update_cmd="apt-get -q update $update_pipe"
+
+eval $update_cmd \
+	&& apt-get $upgrade_flags upgrade

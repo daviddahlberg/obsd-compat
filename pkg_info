@@ -1,0 +1,58 @@
+#!/bin/sh
+
+	
+usage() {
+	echo "usage: $(basename $0) [-Qm] [pkg-name]">&2
+}
+
+
+cmd=apt
+action=list
+unset options
+
+args=`getopt Qm $*` 
+if [ $? -ne 0 ]; then 
+	usage
+	exit 1
+fi 
+set -- $args 
+while [ $# -ne 0 ]; do 
+	case "$1" in
+	-Q)
+		action=search
+		shift
+		;;
+	-m)
+		cmd=apt-mark
+		action=showmanual
+		shift
+		;;
+	--) 
+		shift;
+		args=$*
+		break;; 
+	esac 
+done
+
+packages="$@"
+
+# plausibility checks
+case "$action" in
+list)
+	if [ "$packages" ]; then
+		action=show
+	else
+		options="--installed"
+	fi
+	;;
+show|search)
+	if [ -z "$packages" ]; then	
+		echo "no package chosen" >&2
+		exit 1
+	fi
+	;;
+*)
+	;;
+esac
+
+$cmd $action $options $packages 

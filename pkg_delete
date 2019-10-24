@@ -1,0 +1,48 @@
+#!/bin/sh
+
+	
+usage() {
+	echo "usage: $(basename $0) [-aci] [pkg-name]">&2
+}
+
+
+unset options 
+action=remove
+
+args=`getopt aci $*` 
+if [ $? -ne 0 ]; then
+	usage
+	exit 1
+fi 
+set -- $args 
+while [ $# -ne 0 ]; do 
+	case "$1" in
+	-a) 
+		action=autoremove
+		shift
+		;;
+	-c)
+		options="--purge"
+		# noop
+		shift
+		;;
+	--) 
+		shift;
+		args=$*
+		break;; 
+	esac 
+done
+
+packages="$@"
+
+# plausibility checks
+case "$action" in
+remove)
+	if [ -z "$packages" ]; then	
+		echo "no package chosen" >&2
+		exit 1
+	fi
+	;;
+esac
+
+apt $action $options $packages

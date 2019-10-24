@@ -1,0 +1,35 @@
+#!/bin/sh
+
+unset rolling on_rolling
+unset release on_release
+
+edit_cmd="apt edit-sources"
+reboot_cmd="/sbin/shutdown -r now"
+
+if which lsb_release >/dev/null; then
+	case $(lsb_release -sr) in
+	testing|unstable)	on_rolling=true
+				edit_cmd="true";;
+	*)			on_release=true;;
+	esac
+fi
+
+while getopts 'nsr' opt; do
+	case $opt in
+	n|-n)	reboot_cmd=true;;
+	s|-s)	true;;
+	r|-r)	edit_cmd="apt edit-sources";;
+	*)	printf "usage: %s [-nsr]\n" "$(basename $0)"
+		exit 2;;
+	esac
+done
+
+
+apt clean \
+	&& $edit_cmd \
+	&& apt -q update \
+	&& apt -qy upgrade \
+	&& apt dist-upgrade \
+	&& apt autoremove \
+	&& $reboot_cmd
+
